@@ -1,35 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gera a dashboard estatica (index.html) a partir de 3 abas em 2 planilhas do
-cliente Lucas Nigro (Funil "RAL" / Metodo RaL):
+Gera a dashboard estatica (index.html) do cliente Bruno Corano — Funil Black
+Friday 2026 (sigla de campanha "BC-BF26") — a partir de 2 planilhas:
 
-  - "Leads" (planilha do Funil, SPREADSHEET_ID_FUNIL): fonte UNICA de leads
-    (nao ha aba "Conversas" nesse cliente). Cada linha ja vem com a
-    atribuicao de campanha/conjunto/anuncio pronta via utm_campaign/
-    utm_medium/utm_content — que chegam identicos a Campaign Name/Ad Set
-    Name/Ad Name do Meta Ads.
-  - "Vendas" (mesma planilha do Funil): compradores. Cruza com Leads por
-    lead_id (FK direta); quando lead_id vem vazio, cai no fallback por
-    TELEFONE canonico (DDI "55" e 9o digito do celular, presentes ou nao).
-  - "Pagina 1" (planilha Meta Ads, SPREADSHEET_ID_META): investimento,
-    impressoes, cliques e landing page views do gerenciador.
+  - "Página1" da planilha de captura (SPREADSHEET_ID_FUNIL): fonte UNICA de
+    leads. Colunas: Data · Hora · Nome · Email · Telefone · utm_campaign ·
+    utm_source · utm_content · utm_term · utm_medium · fbclid · id · sck.
+    utm_campaign/utm_medium/utm_content chegam identicos a Campaign Name /
+    Ad Set Name / Ad Name do Meta Ads (utm_term = ID do anuncio).
+  - "Página1" da planilha do gerenciador (SPREADSHEET_ID_META): Day ·
+    Campaign Name · Ad Set Name · Ad Name · Amount Spent · Impressions ·
+    Link Clicks · Landing Page Views.
 
-Criterio de Lead Qualificado (MQL): coluna "classificacao" (coluna O da aba
-Leads) == "QUALIFICADO" (nao-qualificado = "DESQUALIFICADO").
+Funil de CAPTACAO: sem criterio de MQL (lead nao e' classificado), sem
+planilha de compradores e sem CRM comercial — as abas Vendas/Comercial_*/
+Seguidores IG do template ficam desligadas (SHEET_* = None => nao busca).
 
 Este script apenas LE as planilhas (export CSV publico, buscado por NOME da
-aba — sem depender de gid) e emite os REGISTROS BRUTOS (leads[], meta[] e
-sales[]) dentro do HTML. sales[] tem um registro POR COMPRA (nunca agregado
-por lead/telefone), com a DATA REAL da compra ("pago_em") — camp/adset/ad
-vem do lead de origem (por lead_id ou, na ausencia, pelo 1o lead daquele
-telefone), nunca a data da compra e' trocada pela do lead. Todos os filtros,
-agregacoes, KPIs, tabelas e graficos sao calculados no navegador (client-side
-em app.js). Nunca escreve nada de volta nas planilhas.
+aba — sem depender de gid) e emite os REGISTROS BRUTOS (leads[], meta[])
+dentro do HTML. Todos os filtros, agregacoes, KPIs, tabelas e graficos sao
+calculados no navegador (app.js). Nunca escreve nada de volta nas planilhas.
 
-Teste local: --leads-file / --meta-file / --sales-file apontando para CSVs
-baixados (o sandbox do agente nao alcanca docs.google.com; o runner do
-GitHub Actions alcanca).
+Teste local: --leads-file / --meta-file apontando para CSVs baixados (o
+sandbox do agente nao alcanca docs.google.com; o runner do GitHub Actions
+alcanca).
 """
 from __future__ import annotations
 
@@ -45,37 +40,36 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
-# Planilha do Funil (Leads + Vendas) — cliente nao usa gid, busca por nome de aba.
-SPREADSHEET_ID_FUNIL = "1j3EQE4zbRlUVAKyDPTmlnTDP0Jlvw-enQyMPR2LXjfk"
-SHEET_LEADS = "Leads"
-SHEET_VENDAS = "Vendas"
-# CRM comercial (mesma planilha): lead do CRM -> lead do funil (marketing_lead_id
-# = Leads.id) e histórico de etapas. Só conta o funil do produto (metodo_ral).
-SHEET_COM_LEADS = "Comercial_Leads"
-SHEET_COM_ETAPAS = "Comercial_Etapas"
-SHEET_COM_PRESENCA = "Comercial_Presenca"
-COM_FUNIL = "metodo_ral"
-# Vendas que contam: produto da Formação, pagas a partir do início do funil.
-VENDA_PRODUTO = "formacao"
-FUNNEL_START = "2026-08-28"
-# Planilha do Meta Ads (separada da planilha do Funil).
-SPREADSHEET_ID_META = "1xb5itNu9_No6keCKHyzG7qIPobT46BqfmJ_rP0v4h8c"
-SHEET_META = "Página 1"
-# Campanha de captação de seguidores (mesma planilha da Meta). Colunas da
-# Adveronix + 2 preenchidas à mão: Seguidores (ganhos no dia) e Custo por
-# seguidor (ignorada: a dash calcula gasto ÷ seguidores, com o imposto).
-SHEET_SEG = "Seguidores IG"
+# Planilha de captura (leads) — busca por NOME da aba, sem gid.
+SPREADSHEET_ID_FUNIL = "1c9VDkBO6UAq52IQEM8YQHa3f4yhtYkKHn0sXqAjpl9w"
+SHEET_LEADS = "Página1"
+# Abas do template que NÃO existem neste funil (sem compradores, sem CRM,
+# sem campanha de seguidores). None = não busca (o gviz devolveria a 1ª aba
+# para um nome inexistente, misturando leads com vendas).
+SHEET_VENDAS = None
+SHEET_COM_LEADS = None
+SHEET_COM_ETAPAS = None
+SHEET_COM_PRESENCA = None
+COM_FUNIL = "-"
+VENDA_PRODUTO = "-"
+# Início do funil (1ª campanha BC-BF26 no ar em 09/11/2026; leads de teste
+# antigos ficam no período, mas são filtrados em is_test_row()).
+FUNNEL_START = "2026-11-01"
+# Planilha do gerenciador Meta Ads (separada da de captura).
+SPREADSHEET_ID_META = "14nKN2tWHwpSXEDzbnCtuRgd3xhT7rVrEVjYvBPH26S0"
+SHEET_META = "Página1"
+SHEET_SEG = None
 # headers=1: sem ele o gviz funde o cabeçalho com a 1ª linha quando a aba tem
 # muitas colunas vazias (acontecia na Comercial_Leads).
 EXPORT_URL = "https://docs.google.com/spreadsheets/d/{sid}/gviz/tq?tqx=out:csv&headers=1&sheet={sheet}"
 
 # Identificação do cliente/conta (usada só em textos/relatórios — não afeta o cruzamento de dados).
-CLIENT_NAME = "Lucas Nigro"
-MAIN_PRODUCT = "Funil de Sessão Estratégica"
+CLIENT_NAME = "Bruno Corano"
+MAIN_PRODUCT = "Funil Black Friday 2026"
 # Prefixo comum a TODAS as campanhas da conta (usado para agrupar campanhas no
 # dashboard, sem filtrar por sub-funil/etapa — ex. campanhas "E2-CAP" continuam
-# entrando normalmente, só o prefixo "RAL" é exigido).
-MAIN_PRODUCT_PREFIX = "RAL"
+# entrando normalmente). Sigla do funil: BC-BF26.
+MAIN_PRODUCT_PREFIX = "BC-BF26"
 
 BRT = timezone(timedelta(hours=-3))   # horario de Brasilia (exibicao)
 TAX_FACTOR = 1.1385   # imposto de 13,85% sobre o gasto de mídia (Meta Ads)
@@ -87,7 +81,7 @@ TAX_FACTOR = 1.1385   # imposto de 13,85% sobre o gasto de mídia (Meta Ads)
 # ele entra como "Em observação" (dado insuficiente) — nunca é classificado só
 # porque teve 1 resultado com pouco investimento. Ajuste conforme o ticket/CAC.
 SAMPLE_MIN_SPEND = 100.0   # gasto mínimo (R$) para amostra relevante
-SAMPLE_MIN_MQLS = 3        # MQLs mínimos para julgar qualidade profunda
+SAMPLE_MIN_MQLS = 10       # LEADS mínimos para julgar o anúncio (funil sem MQL)
 TOP_ADS_N = 10             # nº de linhas em Top / Piores anúncios
 
 # Metas & parâmetros da conta (DEFAULTS do painel editável da aba Relatório).
@@ -95,7 +89,7 @@ TOP_ADS_N = 10             # nº de linhas em Top / Piores anúncios
 # localStorage) e as tabelas de anúncios recoram CPMQL/CAC e reavaliam a
 # amostra ao vivo. None = "meta não definida" (métrica aparece sem cor até o
 # gestor preencher).
-META_CPMQL = None          # meta de CPMQL (R$/MQL); None = não definida
+META_CPMQL = None          # meta de CPL (R$/lead) — nome mantido p/ compatibilidade; None = não definida
 META_CAC = None            # meta de CAC (R$/venda); None = não definida
 VOLUME_MIN_AMOSTRAL = SAMPLE_MIN_MQLS  # conversões (MQLs) mínimas p/ amostra confiável
 N_DIAS_CORTE = 5           # dias consecutivos acima do teto p/ considerar corte
@@ -105,7 +99,7 @@ N_DIAS_CORTE = 5           # dias consecutivos acima do teto p/ considerar corte
 # Leitura
 # --------------------------------------------------------------------------- #
 def fetch_csv(url: str) -> list[list[str]]:
-    req = urllib.request.Request(url, headers={"User-Agent": "dash-ral-bot/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "dash-bot/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         raw = resp.read().decode("utf-8", errors="replace")
     return list(csv.reader(io.StringIO(raw)))
@@ -116,11 +110,15 @@ def read_csv_file(path: str) -> list[list[str]]:
         return list(csv.reader(f))
 
 
-def load_rows(url: str, local: str | None) -> list[list[str]]:
-    return read_csv_file(local) if local else fetch_csv(url)
+def load_rows(url: str | None, local: str | None) -> list[list[str]]:
+    if local:
+        return read_csv_file(local)
+    return fetch_csv(url) if url else []   # aba desligada (SHEET_* = None)
 
 
-def sheet_url(sid: str, sheet: str) -> str:
+def sheet_url(sid: str, sheet: str | None) -> str | None:
+    if not sheet:
+        return None
     return EXPORT_URL.format(sid=sid, sheet=urllib.parse.quote(sheet))
 
 
@@ -195,6 +193,17 @@ def parse_date_brt(v: str) -> str | None:
 
 def is_test_lead(rowtext: str) -> bool:
     return "<test lead" in rowtext.lower()
+
+
+def is_test_row(name: str, email: str, *utms: str) -> bool:
+    """Leads de teste do formulário: nome "teste…", e-mail "teste…@" ou alguma
+    UTM com "teste" (ex.: utm_source=teste, utm_campaign=testecampaign)."""
+    if norm(name).startswith("teste") or norm(email).split("@")[0].startswith("teste"):
+        return True
+    return any("teste" in norm(u) for u in utms)
+
+
+ORGANIC_SOURCES = ("organico", "organic", "org", "manychat", "bio", "direct", "direto")
 
 
 def is_yes(v: str | None) -> bool:
@@ -496,11 +505,11 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
     lheader = leads_rows[0] if leads_rows else []
     lidx = header_index(
         lheader,
-        {"id": ["id"], "created": ["criado_em"], "phone": ["whatsapp"], "name": ["nome"],
-         "qualif": ["classificacao"], "campaign": ["utm_campaign"], "adset": ["utm_medium"],
-         "ad": ["utm_content"], "bucket": ["atende_empresas"], "source": ["utm_source"]},
-        {"id": 0, "created": 1, "phone": 3, "name": 2, "qualif": 14, "campaign": 7, "adset": 6, "ad": 8,
-         "bucket": 10, "source": 5},
+        {"id": ["id"], "created": ["data", "criado_em"], "hora": ["hora"], "phone": ["telefone", "whatsapp"],
+         "name": ["nome"], "email": ["email"], "campaign": ["utm_campaign"], "adset": ["utm_medium"],
+         "ad": ["utm_content"], "source": ["utm_source"]},
+        {"id": 11, "created": 0, "hora": 1, "phone": 4, "name": 2, "email": 3, "campaign": 5, "adset": 9,
+         "ad": 7, "source": 6},
     )
 
     leads = []
@@ -510,12 +519,17 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
     # template generico, aqui aplicada sobre a propria aba Leads).
     rows_sorted = sorted(
         [r for r in leads_rows[1:] if any((c or "").strip() for c in r)],
-        key=lambda r: parse_date_brt(cell(r, lidx["created"])) or "",
+        key=lambda r: (parse_date_brt(cell(r, lidx["created"])) or "") + " " + cell(r, lidx["hora"]),
     )
     id_attrib: dict[str, dict] = {}
     phone_attrib: dict[str, dict] = {}
+    n_test = 0
     for row in rows_sorted:
         if is_test_lead(" ".join(str(c) for c in row)):
+            continue
+        if is_test_row(cell(row, lidx["name"]), cell(row, lidx["email"]), cell(row, lidx["campaign"]),
+                       cell(row, lidx["source"]), cell(row, lidx["adset"]), cell(row, lidx["ad"])):
+            n_test += 1
             continue
         campaign_raw = cell(row, lidx["campaign"])
         campaign_valid = valid_utm(campaign_raw)
@@ -526,15 +540,17 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
         source = norm(cell(row, lidx["source"]))
         if source.startswith("chatgpt"):
             src = "chatgpt"
-        elif not campaign_valid:
+        elif not campaign_valid or source.startswith(ORGANIC_SOURCES):
+            # orgânico (ex.: utm_source=organico, campanha "mctv" do manychat)
             src = "org"
         elif not source or source.startswith(("meta", "facebook", "fb", "instagram", "ig")):
             src = "meta"
         else:
             src = "outros"
-        camp = campaign_raw if campaign_valid else "(sem campanha)"
-        adset = cell(row, lidx["adset"]) if campaign_valid else "(sem conjunto)"
-        ad = cell(row, lidx["ad"]) if campaign_valid else "(sem anúncio)"
+        paid = campaign_valid and src != "org"
+        camp = campaign_raw if paid else "(sem campanha)"
+        adset = (cell(row, lidx["adset"]) or "(sem conjunto)") if paid else "(sem conjunto)"
+        ad = (cell(row, lidx["ad"]) or "(sem anúncio)") if paid else "(sem anúncio)"
         lead_date = parse_date_brt(cell(row, lidx["created"]))
         lead_id = cell(row, lidx["id"])
         phone = canon_phone(cell(row, lidx["phone"]))
@@ -543,7 +559,11 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
             id_attrib[lead_id] = attrib
         if phone and phone not in phone_attrib:
             phone_attrib[phone] = attrib
-        bucket = pretty_bucket(cell(row, lidx["bucket"]))
+        # "bucket" = campanha (utm_campaign cru, inclui orgânicas tipo "mctv") e
+        # "prof" = anúncio/conteúdo (utm_content) — alimentam os gráficos de
+        # distribuição da Visão Geral (este funil não tem perfil/profissão).
+        bucket = campaign_raw if campaign_valid else "(sem utm_campaign)"
+        prof = cell(row, lidx["ad"]) or "(sem utm_content)"
         leads.append({
             "d": lead_date,
             "src": src,
@@ -551,9 +571,9 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
             "camp": camp,
             "adset": adset,
             "ad": ad,
-            "prof": bucket,
+            "prof": prof,
             "bucket": bucket,
-            "q": 1 if is_qualificado(cell(row, lidx["qualif"])) else 0,
+            "q": 0,   # funil sem qualificação de lead (sem MQL)
             "utm": 1 if campaign_valid else 0,
             "nm": first_last_initial(cell(row, lidx["name"])),
             "em": "—",
@@ -589,7 +609,9 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
             "receita": round(p["receita"], 2),
         })
 
-    log_unmatched_sales(matched, len(purchases), unmatched)
+    print(f"  leads de teste descartados: {n_test}", file=sys.stderr)
+    if purchases:
+        log_unmatched_sales(matched, len(purchases), unmatched)
     com = build_commercial(com_leads_rows, com_etapas_rows, presenca_rows, id_attrib, phone_attrib)
     seg = build_followers(seg_rows)
 
@@ -607,7 +629,7 @@ def process(leads_rows, meta_rows, sales_rows, com_leads_rows=None, com_etapas_r
          # cliente. Sem ela, o Link nas tabelas Top/Piores vira "—".
          "link": ["creative instagram permalink", "instagram permalink", "permalink",
                   "creative link", "link do anuncio", "link do criativo"]},
-        {"day": 0, "campaign": 1, "adset": 2, "ad": 3, "spent": 7, "impr": 4, "clicks": 5, "leads": None, "pv": 6},
+        {"day": 0, "campaign": 1, "adset": 2, "ad": 3, "spent": 4, "impr": 5, "clicks": 6, "leads": None, "pv": 7},
     )
 
     meta = []
@@ -719,8 +741,8 @@ def render(data, template_path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--leads-file", help="CSV local da aba Leads (fonte única de leads)")
-    ap.add_argument("--meta-file", help="CSV local da aba Página 1 (Meta Ads)")
+    ap.add_argument("--leads-file", help="CSV local da aba Página1 da planilha de captura (leads)")
+    ap.add_argument("--meta-file", help="CSV local da aba Página1 do gerenciador (Meta Ads)")
     ap.add_argument("--sales-file", help="CSV local da aba Vendas (Compradores)")
     ap.add_argument("--com-leads-file", help="CSV local da aba Comercial_Leads")
     ap.add_argument("--com-etapas-file", help="CSV local da aba Comercial_Etapas")
@@ -750,13 +772,9 @@ def main():
         f.write(render(data, args.template))
 
     b = data["build"]
-    q = sum(l["q"] for l in data["leads"])
-    vd = sum(s["vendas"] for s in data["sales"])
-    fat = sum(s["fat"] for s in data["sales"])
     print("== build ok ==", file=sys.stderr)
     print(f"  periodo   : {b['date_min']} -> {b['date_max']}", file=sys.stderr)
-    print(f"  leads     : {len(data['leads'])}  MQLs (qualificados): {q}", file=sys.stderr)
-    print(f"  vendas    : {vd}  faturamento: R$ {fat:,.2f}", file=sys.stderr)
+    print(f"  leads     : {len(data['leads'])}  (meta: {sum(1 for l in data['leads'] if l['src'] == 'meta')})", file=sys.stderr)
     print(f"  meta      : {len(data['meta'])} linhas", file=sys.stderr)
     print(f"  out       : {args.out}", file=sys.stderr)
 

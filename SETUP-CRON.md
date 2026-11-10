@@ -10,7 +10,7 @@ Na **primeira execução** o próprio workflow **habilita o GitHub Pages**
 automaticamente (`actions/configure-pages` com `enablement: true`). Depois de rodar
 uma vez, a página fica no ar em:
 
-**`https://scale-ag.github.io/dash-lucas-nigro-ral/`**
+**`https://scale-ag.github.io/dash-corano-bf26/`**
 
 Se preferir disparar a primeira execução na mão: aba **Actions** → *Build & Deploy
 Dashboard* → **Run workflow**.
@@ -18,7 +18,7 @@ Dashboard* → **Run workflow**.
 ## Passo 2 — Token do GitHub (fine-grained)
 
 GitHub → *Settings* → *Developer settings* → **Fine-grained tokens** → *Generate*:
-- Repository access: **Only select repositories → `dash-lucas-nigro-ral`**
+- Repository access: **Only select repositories → `dash-corano-bf26`**
 - Permissions → **Actions: Read and write**
 - (opcional) validade longa
 
@@ -32,7 +32,7 @@ Crie um job e preencha **exatamente** (um valor por vez):
 
 ### URL
 ```
-https://api.github.com/repos/scale-ag/dash-lucas-nigro-ral/actions/workflows/deploy.yml/dispatches
+https://api.github.com/repos/scale-ag/dash-corano-bf26/actions/workflows/deploy.yml/dispatches
 ```
 
 ### Método (Request method)
@@ -80,4 +80,4 @@ Content-Type: application/json
 - A página lê as planilhas **somente leitura**; nunca escreve nelas.
 - O `schedule` nativo (`*/30 * * * *`) fica como **backup**; o GitHub costuma
   atrasar agendamentos, por isso o cron-job.org é a fonte principal de pontualidade.
-- Trocar o critério de qualificação, gids ou colunas: edite `build/build.py`.
+- Trocar planilhas, abas ou colunas: edite `build/build.py`.

@@ -13,12 +13,13 @@ name: Coletar dados brutos do Relatório (pré-Insights)
 #
 # build/relatorios_dados.json não é lido pelo site; ao commitar na main ele
 # só passa pelo path filter do deploy.yml (rebuild inofensivo/idempotente).
+# DESLIGADO neste cliente (Bruno Corano · BC-BF26): funil só de captação, sem
+# MQL/vendas — os guias de Insights ainda não foram adaptados. Só roda manual.
+# Para religar, devolva o schedule abaixo:
+#   schedule:
+#     - cron: "50 2 * * *"   # 23h50 BRT
 on:
   workflow_dispatch:
-  schedule:
-    # 1x ao dia, 23h50 horário de Brasília = 02h50 UTC (10 min antes da
-    # Routine do Claude escrever os Insights, garantindo dado fresco).
-    - cron: "50 2 * * *"
 
 permissions:
   contents: write

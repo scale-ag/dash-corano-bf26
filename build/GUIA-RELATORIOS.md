@@ -73,46 +73,27 @@ gráficos, Top/Piores Anúncios — segue funcionando normalmente).
 
 ## Contexto do funil
 
-**Funil do Lucas Nigro** (captação de leads para a formação "Consultores
-Financeiros Empresariais | Método RaL", via formulário de captura):
+**Funil Black Friday 2026 — Bruno Corano** (sigla de campanha `BC-BF26`;
+captação de leads via formulário de LP):
 
 ```
-Impressões → Cliques → Page View → Leads → MQLs → Reuniões agendadas → Propostas → Vendas
+Impressões → Cliques → Page View → Leads
 ```
 
 - O anúncio no Meta Ads leva a uma landing page; a visita gera **Page View**
-  (`Landing Page Views` do Meta Ads — já conectado, permite calcular Connect
-  Rate e ConvLP).
-- Ao preencher o formulário, o lead cai na aba **Leads** (fonte única de
-  leads deste dashboard), já com campanha/conjunto/anúncio de origem via
-  `utm_campaign`/`utm_medium`/`utm_content`.
-- **MQL** = coluna `classificacao` (aba Leads) == `"QUALIFICADO"` — já
-  automatizado no sistema, não precisa ser explicado nem recalculado.
-- **Agendamento** acontece via **WhatsApp**, fora da mídia paga — vem do
-  **CRM comercial** (abas `Comercial_Leads`/`Comercial_Etapas`, funil
-  `metodo_ral`, etapa "Reunião agendada"; "Proposta enviada" também é
-  lida). **Não existe etapa de
-  comparecimento** nesse funil (o agendamento é direto por WhatsApp) — a
-  **responsabilidade do tráfego termina no MQL**.
-- **Venda** é registrada na aba **Vendas**, cruzada de volta ao anúncio de
-  origem por `lead_id` (fallback por telefone) — **já conectada**.
+  (`Landing Page Views` da aba Página1 do gerenciador — permite Connect Rate e
+  ConvLP).
+- Ao preencher o formulário, o lead cai na aba **Página1** da planilha de
+  captura, com `utm_campaign`/`utm_medium`/`utm_content` = Campanha/Conjunto/
+  Anúncio do Meta Ads (`utm_term` = ID do anúncio). Leads com
+  `utm_source=organico` (ex.: campanha `mctv` do manychat) são orgânicos.
+- **Sem MQL** (leads não são classificados), **sem planilha de compradores** e
+  **sem CRM** neste funil — a métrica de decisão é o **CPL** (com CTR, Connect
+  Rate e ConvLP como diagnóstico).
 
-> **Estado atual dos dados:** Impressões → Cliques → Page View → Leads →
-> MQLs → Reuniões agendadas (campo `agendamentos`) → Propostas → Vendas estão
-> todos conectados (`fontes_conectadas` tudo `true`). Regras (combinadas com o
-> cliente em 16/10/2026):
-> - Reuniões/propostas vêm do CRM (funil `metodo_ral`, só registros ativos,
->   só eventos `real`/`inferida` — histórico importado `desconhecida` não
->   conta). Quem chegou em proposta ou fechado conta como reunião; a etiqueta
->   "Agendar reunião" não conta.
-> - **Modo coorte:** reuniões, propostas e vendas contam no dia em que o lead
->   ENTROU (não no dia da etapa). Os números dos dias recentes ainda vão
->   crescer conforme os leads avançam — leve isso em conta antes de dizer
->   que uma taxa caiu.
-> - Vendas vêm da aba Vendas (pagas, produto Formação), atribuídas pelo
->   `lead_id`. Lead do CRM ou venda sem ligação com a aba Leads conta no
->   total, sem campanha (não aparece em `por_campanha`/`por_conjunto`).
-> - O volume ainda é pequeno: trate as taxas como sinal, não conclusão.
+> **Estado atual dos dados:** Impressões → Cliques → Page View → Leads
+> conectados. Insights por IA **desligados** neste cliente até os guias e
+> `coletar_dados_relatorio.py` serem adaptados ao funil só de captação.
 
 ## Fórmulas fundamentais
 

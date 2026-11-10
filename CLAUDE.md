@@ -1,163 +1,78 @@
-# CLAUDE.md — Contexto do projeto (Dashboard Lucas Nigro · RAL)
+# CLAUDE.md — Contexto do projeto (Dashboard Bruno Corano · Funil Black Friday 2026 · BC-BF26)
 
-> Este arquivo é lido automaticamente pelo Claude Code ao abrir o repositório.
-> Ele carrega TODO o contexto necessário para continuar o trabalho sem depender
-> de mensagens anteriores. Mantenha-o atualizado.
->
-> Este repositório já está **configurado para o cliente Lucas Nigro** (Funil de
-> Sessão Estratégica, Método RaL). Não é mais o template genérico — os valores
-> abaixo são reais. Para replicar este modelo para outro cliente, veja
-> `GUIA-REPLICACAO.md`.
+> Lido automaticamente pelo Claude Code ao abrir o repositório. Carrega todo o
+> contexto para continuar o trabalho sem depender de mensagens anteriores.
+> Mantenha-o atualizado. Este repo nasceu do template de dashboard da Scale
+> (cópia do dash Lucas Nigro/RAL) e foi **reconfigurado em 10/11/2026** para
+> este cliente; para replicar o modelo, veja `GUIA-REPLICACAO.md`.
 
 ---
 
 ## Status da configuração
 
-- **Repositório:** `scale-ag/dash-lucas-nigro-ral`.
-- **URL pública:** `https://scale-ag.github.io/dash-lucas-nigro-ral/`.
-- **`build/build.py`:** `SPREADSHEET_ID_FUNIL` (Leads + Vendas), `SPREADSHEET_ID_META`
-  (Página 1), `CLIENT_NAME`, `MAIN_PRODUCT`, `MAIN_PRODUCT_PREFIX`, `TAX_FACTOR`
-  preenchidos (ver "Fontes de dados" abaixo).
-- **Critério de MQL:** `is_qualificado()` em `build.py` — coluna `classificacao`
-  (aba Leads) == `"QUALIFICADO"`.
-- **`build/app.js` / `build/template.html`:** rótulos de UI e logo já ajustados
-  para este cliente (sem referência a "médico"/especialidade médica).
-- **`build/identidade-visual.css`:** cores default do template (cliente não pediu
-  identidade visual própria).
-- **`build/GUIA-RELATORIOS.md`:** contexto do funil preenchido.
-- **Insights de Tráfego:** análise por IA 1×/dia (23h59 BRT), **1 relatório por
-  dia** (não mais por período selecionado) em **6 seções de texto corrido**
-  (RESUMO DO PERÍODO · LEITURA DO FUNIL · CLASSIFICAÇÃO POR CAMPANHA/CONJUNTO ·
-  GARGALO DE DADO — opcional · AÇÕES RECOMENDADAS · PRÓXIMA DECISÃO). Funil:
-  Impressões → Cliques → Page View → Leads → MQLs → Agendamentos → Vendas, sem
-  etapa de comparecimento (agendamento via WhatsApp; responsabilidade do
-  tráfego termina no MQL). `build/relatorios.json` e `build/relatorios_dados.json`
-  começam vazios (`{}`) até a 1ª execução. Pipeline: a Routine do Actions
-  `briefing.yml` gera `relatorios_dados.json` (23h50 BRT) e a **Routine do
-  Claude** (`create_trigger`, 23h59 BRT) lê os números + os 2 guias e escreve
-  `relatorios.json` na `main` (ver "Briefing automático" abaixo).
+- **Repositório:** `scale-ag/dash-corano-bf26` · **URL pública:** `https://scale-ag.github.io/dash-corano-bf26/`.
+- **`build/build.py`:** `SPREADSHEET_ID_FUNIL` (planilha de captura), `SPREADSHEET_ID_META`
+  (gerenciador), `CLIENT_NAME="Bruno Corano"`, `MAIN_PRODUCT="Funil Black Friday 2026"`,
+  `MAIN_PRODUCT_PREFIX="BC-BF26"`, `TAX_FACTOR=1.1385`.
+- **Funil só de captação:** `Gasto → Impressões → Cliques → Page Views → Leads`.
+  **Sem critério de MQL** (leads não são classificados — `q` é sempre 0), **sem
+  planilha de compradores** e **sem CRM** — essas métricas foram removidas da UI
+  (funil, KPIs, tabelas, gráficos, Top Anúncios). Métrica de decisão: **CPL**.
+- Abas do template que não existem aqui ficam desligadas em `build.py`
+  (`SHEET_VENDAS`/`SHEET_COM_*`/`SHEET_SEG = None` → `load_rows` devolve `[]`,
+  sem buscar — o gviz devolveria a 1ª aba para um nome inexistente).
+- Páginas: **Visão Geral** · **Funil de Leads (Meta Ads)** · **Relatório**. As páginas
+  Seguidores e ChatGPT Ads saíram do menu (o código `renderSeg`/`renderGpt` ficou
+  em `app.js` como engine, sem uso).
+- **Insights de Tráfego por IA: desligados** (bloco removido do Relatório,
+  `briefing.yml` só manual). Para ligar: adaptar `GUIA-RELATORIOS.md`,
+  `GUIA-INTERPRETACAO-METRICAS.md` e `coletar_dados_relatorio.py` ao funil sem
+  MQL, religar o schedule e criar a Routine do Claude (`create_trigger`).
+- `build/identidade-visual.css`: cores default do template.
 
-> **Fora do escopo deste projeto:** não há Cloudflare Worker nem chamada paga à
-> API da Anthropic no pipeline. A automação de Insights é feita por Routine
-> agendada do Claude Code (opcional, acima).
+## Fontes de dados (Google Sheets, somente leitura)
 
----
+Buscadas **por nome de aba** (`gviz/tq?tqx=out:csv&headers=1&sheet=<nome>`).
 
-## O que é
+**Planilha de captura** — `SPREADSHEET_ID_FUNIL = "1c9VDkBO6UAq52IQEM8YQHa3f4yhtYkKHn0sXqAjpl9w"`,
+aba **`Página1`** (`SHEET_LEADS`, fonte única de leads):
+`Data` · `Hora` · `Nome` · `Email` · `Telefone` · `utm_campaign` · `utm_source` ·
+`utm_content` · `utm_term` · `utm_medium` · `fbclid` · `id` · `sck`.
+`Data` (+`Hora`) já em BRT. `utm_term` = ID do anúncio (não usado).
 
-Dashboard de **Captura de Leads** — um app de BI estático (HTML/CSS/JS
-puro + Chart.js via CDN) publicado no **GitHub Pages**, que cruza a lista de
-**Leads** com o gerenciador de mídia paga e se atualiza sozinho a cada ~30 min
-(build 100% na nuvem via GitHub Actions, disparado externamente pelo cron-job.org).
-
-- **URL pública:** `https://scale-ag.github.io/dash-lucas-nigro-ral/`
-- **Somente leitura** das planilhas. Nunca escrever de volta.
-- **Análise principal (macro), em todos os gráficos/tabelas/KPIs:** quantidade
-  de Leads → Leads Qualificados (MQLs) → Vendas, e o **custo de cada etapa**
-  (CPL, CPMQL, CAC) — é a lente central do dashboard, não um detalhe secundário.
-
-## Fontes de dados (Google Sheets)
-
-Duas planilhas — **sem gid fixo**: o build busca cada aba **por nome**
-(`gviz/tq?tqx=out:csv&sheet=<nome>`), mais robusto a reordenação de abas que
-export por gid.
-
-**Planilha do Funil** — `SPREADSHEET_ID_FUNIL = "1j3EQE4zbRlUVAKyDPTmlnTDP0Jlvw-enQyMPR2LXjfk"`:
-
-| Aba | Colunas |
-|-----|---------|
-| **Leads** (`SHEET_LEADS`, fonte **única** de leads — não há aba Conversas neste cliente) | `id` · `criado_em` · `nome` · `whatsapp` · `email` · `utm_source` · `utm_medium` · `utm_content` · `utm_term` · `atende_empresas` · `clientes_empresariais` · `objetivo_formacao` · `lead_score` · `classificacao` (**coluna O**, MQL) · `status` · `cidade` · `uf` |
-| **Vendas** (`SHEET_VENDAS`) | `transaction_id` · `pago_em` · `status` · `pago` · `comprador` · `email` · `whatsapp` · `valor` · `moeda` · `produto` · `utm_source` · `utm_campaign` · `lead_id` · `casado_por` |
-
-**Planilha Meta Ads** — `SPREADSHEET_ID_META = "1xb5itNu9_No6keCKHyzG7qIPobT46BqfmJ_rP0v4h8c"`, aba **"Página 1"** (`SHEET_META`):
-`Day` · `Campaign Name` · `Ad Set Name` · `Ad Name` · `Impressions` · `Link Clicks` · `Landing Page Views` · `Amount Spent`.
-Não tem Ad ID, Content Views, Adds to Cart, Subscriptions, nem link de criativo
-— essas métricas aparecem "-"/"—" na dash. **Tem** Landing Page Views (ConvLP/CPV
-calculáveis, diferente do gap padrão do template genérico).
-
-**Aba "Seguidores IG"** (`SHEET_SEG`, mesma planilha da Meta) — campanha de
-**captação de seguidores** (`RAL | E1-DIST | … | TRFG …`; não aparece na Página1):
-`Day` · `Campaign Name` · `Ad Set Name` · `Ad Name` · `Impressions` · `Link Clicks` ·
-`Amount Spent` (automáticos, Adveronix) · `Seguidores` (col. H, **à mão**: ganhos no
-dia) · `Custo por seguidor` (col. I, à mão — **ignorada**: a dash calcula gasto ÷
-seguidores, com o imposto). `build.py::build_followers()` → `DATA.seg[]`
-(`{d, camp, adset, ad, sp, im, cl, seg}`); célula de seguidores **vazia = não
-preenchido** (`seg: null`), diferente de **0**. Custo por seguidor só usa o gasto
-das linhas preenchidas (0 conta, vazio não); `app.js::addSeg()`. Linhas sem gasto,
-sem impressão e sem seguidor são puladas.
-
-**Separação das páginas (pedido de 24/10/2026):** Visão Geral (e o funil do
-Relatório) **soma tudo** — gasto/impressões/cliques de Página1 + Seguidores IG,
-com o card Gasto quebrado em Leads/Seguidores e o passo "Seguidores ganhos"; o CR
-usa só cliques das campanhas que medem Page View (`clpv`). **Captura Meta Ads** e
-Top/Piores = só campanhas de leads (Página1). **Funil Captação de Seguidores**
-(`renderSeg()`, `#seg`) = só a aba Seguidores IG: funil Gasto → Impressões →
-Cliques → Seguidores (Custo/Seguidor, Seg./Clique), evolução diária, tabela diária,
-seguidores e gasto por anúncio, hierarquia Campanha → Conjunto → Anúncio com filtro
-cruzado (`STATE.sSel*`). Os Insights de Tráfego continuam só com o funil de leads.
-
-URL de export CSV (por nome de aba): `https://docs.google.com/spreadsheets/d/<ID>/gviz/tq?tqx=out:csv&sheet=<nome>`
-
-### Regra de Lead Qualificado (MQL)
-Coluna `classificacao` da aba Leads (**coluna O**) == `"QUALIFICADO"` (valor
-oposto: `"DESQUALIFICADO"`). Lógica em `build.py` → `is_qualificado`. O gráfico
-"Leads por perfil profissional" (`app.js`, `renderGeralCore`) colore verde/cinza
-pelo mesmo critério, usando a coluna `atende_empresas` como dimensão (não há
-"especialidade médica" nesse cliente).
+**Planilha Meta Ads** — `SPREADSHEET_ID_META = "14nKN2tWHwpSXEDzbnCtuRgd3xhT7rVrEVjYvBPH26S0"`,
+aba **`Página1`** (`SHEET_META`, sem espaço):
+`Day` · `Campaign Name` · `Ad Set Name` · `Ad Name` · `Amount Spent` · `Impressions` ·
+`Link Clicks` · `Landing Page Views`.
 
 ### Cruzamento por UTMs (Leads × Meta Ads)
-Cada linha da aba **Leads** já vem com a atribuição de campanha pronta:
-`utm_campaign` = `Campaign Name`, `utm_medium` = `Ad Set Name`, `utm_content` =
-`Ad Name` (valores idênticos aos do Meta Ads, linha a linha) — `build.py` só
-copia esses valores, sem precisar de nenhuma aba intermediária tipo "Conversas".
+`utm_campaign` = Campaign Name · `utm_medium` = Ad Set Name · `utm_content` = Ad Name.
+Sigla do funil: **`BC-BF26`** (ex.: `BC-BF26 | E2-CAP | P1-QUENTE | LEAD | CBO | 2026-11-09 | All in one`).
 
-### ChatGPT Ads (utm_source)
-Lead com `utm_source` começando por `chatgpt` (`chatgpt-ads`, `chatgpt`) vira
-`src="chatgpt"` / `plat="gpt"` em `build.py` (vendas herdam o `src` do lead).
-Tem página própria **Captura ChatGPT Ads** (`renderGpt()` em `app.js`, hash
-`#gpt`) com Leads → MQLs → Vendas/Faturamento, tabela diária, hierarquia
-Campanha/Conjunto/Anúncio e leads qualificados. **Sem gasto**: não há planilha
-de mídia do ChatGPT Ads, então CPL/CPMQL/CAC aparecem "sem dado". Esses leads
-ficam **fora** da página Meta Ads e do Top/Piores Anúncios, mas entram na
-Visão Geral (todos os leads). A página Meta Ads (`metaScope`) e o Top/Piores
-(`renderRelAds`) usam **só `src==="meta"`** (`isMeta`) — orgânicos "(sem
-campanha)" também ficam fora, p/ o CPL/CPMQL do funil bater com o das campanhas.
-Lead só vira `meta` se tiver campanha **e** `utm_source` da Meta (`meta-ads`,
-`facebook`, `ig`… ou vazio); campanha preenchida com outra origem (ex.: lead de
-teste `utm_source="adryan gpt"`, campanha `testetres`) vira `src="outros"`.
-
-### Vendas & Faturamento (aba Vendas)
-`build.py` → `build_purchases()` lê a aba **Vendas** (Eduzz) e só mantém
-compras com `pago == "sim"`, produto da **Formação** (`VENDA_PRODUTO`) e
-`pago_em` a partir de `FUNNEL_START = "2026-08-28"` (tira a venda de 26/08,
-anterior ao funil; o produto de teste cai no filtro de produto). Quantidade e
-valor das vendas vêm **daqui**, nunca da etapa "fechado" do CRM.
-
-Atribuição: **1) `lead_id`** (`Vendas.lead_id` → `Leads.id`) · **2)** fallback
-por telefone canônico (`canon_phone()`). Venda **sem ligação conta no total**
-(Visão Geral), com `src="sem_vinculo"` e sem campanha — fica fora da página
-Meta. Regra combinada com o cliente em 16/10/2026 (antes, venda sem ligação
-era excluída). `log_unmatched_sales()` lista no build as vendas sem vínculo.
-
-**Modo coorte:** venda ligada é datada no dia em que o **lead entrou**
-(`Leads.criado_em`, BRT), não no `pago_em`; venda sem ligação usa o `pago_em`.
+### Classificação da origem (`build.py::process`)
+- `utm_source` começando com `meta`/`facebook`/`fb`/`instagram`/`ig` (ou vazio) **com
+  campanha** → `src="meta"` (página Meta Ads e Top Anúncios usam só esses).
+- `utm_source` orgânico (`organico`, `manychat`…; ex.: campanha `mctv`) ou sem
+  campanha → `src="org"` (entra só na Visão Geral).
+- **Leads de teste descartados** (`is_test_row`): nome começando com "teste",
+  e-mail `teste…@` ou qualquer UTM contendo "teste".
+- Para os gráficos da Visão Geral: `bucket` = `utm_campaign` cru ("Leads por
+  campanha") e `prof` = `utm_content` ("Leads por anúncio").
 
 ### Imposto da mídia paga
-`TAX_FACTOR = 1.1385` em `build.py` — imposto de **13,85%** sobre o gasto de
-mídia (Meta Ads). O toggle "Imposto Meta" fica **ativo por padrão**
-(`STATE.tax=true` em `app.js`) e `taxf()` multiplica `a.sp` (gasto) por esse
-fator em todo lugar que deriva de gasto — Gasto, CPL, CPMQL, CAC — em todos
-os gráficos/tabelas (`app.js`: KPIs, combinado diário, hierarquia de
-campanha/conjunto/anúncio, Top/Piores Anúncios). Desativar o toggle volta ao
-gasto bruto (sem imposto).
+`TAX_FACTOR = 1.1385` (13,85%, padrão do template). Toggle "Imposto Meta" ligado
+por padrão (`STATE.tax=true`); `taxf()` multiplica o gasto em Gasto/CPM/CPC/CPV/CPL.
 
-### Convenções de campanha (do cliente)
-Todas as campanhas usam o prefixo `MAIN_PRODUCT_PREFIX = "RAL"`, sem filtrar por
-sub-funil — mantém TODAS as campanhas no dashboard. Sigla de etapa observada na
-única campanha ativa até agora: `E2-CAP` (Etapa 2 – Captura), dentro do nome
-completo `RAL | E2-CAP | P2-FRIO | LEAD | CBO | <data> | LAL`. A aba Leads já
-traz `utm_campaign`/`utm_medium`/`utm_content` prontos (ver "Cruzamento por
-UTMs" acima) — não precisa de aba intermediária.
+### Aba Relatório
+Espelha a Visão Geral + painel de metas editável (**Meta CPL**, volume mínimo
+amostral em **leads**, N dias p/ corte; `localStorage['dm_metas']`; o campo
+interno continua `METAS.cpmql` por compatibilidade) + **Top Anúncios**
+ranqueados por **CPL** (menor primeiro). Amostra relevante = gasto ≥
+`SAMPLE_MIN_SPEND` (R$ 100) **e** leads ≥ volume mínimo (default
+`SAMPLE_MIN_MQLS = 10`, aqui em leads); senão "Em observação".
+
+**Ordem das colunas nas tabelas diárias:** `Data · Dia · Gasto · CPM · CTR · CPC ·
+Page Views · Connect Rate · ConvLP · Leads · CPL`.
 
 ## Arquitetura / arquivos
 
@@ -181,73 +96,6 @@ GUIA-REPLICACAO.md        # como replicar este modelo para outros relatórios/cl
 SETUP-CRON.md             # valores exatos do cron-job.org (com marcadores a preencher)
 ```
 
-### Aba Relatório
-Terceira página (sidebar, entre a de mídia paga e o rodapé). **Espelha a Visão
-Geral** (mesmo funil/KPIs/gráficos/tabela diária, via `renderGeralCore(REL_IDS)`)
-e, abaixo, acrescenta 3 blocos novos + um painel de metas editável:
-- **Metas & parâmetros (painel editável)** — no topo da aba: Meta CPMQL, Meta CAC, Volume
-  mínimo amostral (MQLs), N dias p/ corte. Persiste em `localStorage['dm_metas']`, default de
-  `build.py` (`META_CPMQL`/`META_CAC`=None → "não definida"; `VOLUME_MIN_AMOSTRAL`/`N_DIAS_CORTE`).
-  Editar recolore **CPMQL/CAC** nas tabelas de anúncio (verde ≤ meta · amarelo até +30% ·
-  vermelho acima) e ajusta o badge Em observação/Avaliável, **tudo ao vivo**
-  (`METAS` + `renderRelAds()` em `app.js`).
-- **Top Anúncios** e **Piores Anúncios** — 17 colunas + coluna **Status** (Anúncio · Status ·
-  Campanha · Conjunto · Gasto · Impr · CPM · CTR · Leads · CPL · MQLs · Tx‑MQL · CPMQL · ConvMQL ·
-  Vendas · CAC · Faturamento · ROAS · **Link**). Anúncio, Status e Link ficam **sticky**.
-  Ranking pelo **resultado mais profundo disponível** (Venda→MQL), amostra relevante primeiro;
-  sem amostra → badge **"Em observação"**. Limiares em `build.py`: `SAMPLE_MIN_SPEND`,
-  `SAMPLE_MIN_MQLS`, `TOP_ADS_N`.
-- **Insights de Tráfego** — texto do **dia** redigido pelo **Claude** (linguagem de
-  gestor de tráfego), lido de `build/relatorios.json` (sem API no build/navegador —
-  o site só exibe o texto já pronto). **1 análise por dia** (gerada no fechamento,
-  23h59 BRT), **não** por período selecionado — não reage ao seletor de período da
-  topbar. Formato em **6 seções de texto corrido** (sem tabelas): RESUMO DO PERÍODO ·
-  LEITURA DO FUNIL · CLASSIFICAÇÃO POR CAMPANHA/CONJUNTO · GARGALO DE DADO (só
-  aparece quando falta fonte conectada) · AÇÕES RECOMENDADAS · PRÓXIMA DECISÃO,
-  seguido de um rodapé fixo gerado pelo front-end (`app.js`), não pela IA. Toda a
-  aritmética é pré-calculada em `build/relatorios_dados.json` (números do dia,
-  janelas de 7/14/30d, acumulado p/ fase de calibração, quebra por
-  campanha/conjunto) — a Routine só interpreta, nunca recalcula. Regras completas
-  em `build/GUIA-RELATORIOS.md` + `build/GUIA-INTERPRETACAO-METRICAS.md`.
-
-### Briefing automático do gestor (Routine do Claude, sem chamada à API Anthropic)
-`build/relatorios.json` pode ser escrito 1×/dia por uma **Routine do Claude**
-(Claude Code Remote — mesma infraestrutura de sessão/agente deste repo, agendada;
-não é chamada paga à API). Fluxo em 2 etapas, porque o ambiente da Routine não
-alcança `docs.google.com` (só o runner do GitHub Actions alcança):
-1. `build/coletar_dados_relatorio.py` (GitHub Actions, `.github/workflows/briefing.yml`,
-   1×/dia) agrega **só números** em `build/relatorios_dados.json` e commita na `main`.
-2. A Routine do Claude lê esse JSON + `build/GUIA-RELATORIOS.md` +
-   `build/GUIA-INTERPRETACAO-METRICAS.md`, redige `build/relatorios.json` e faz
-   commit/push direto na `main`, disparando o `deploy.yml`. **Precisa ser criada
-   por cliente** (`create_trigger` apontando para o repo novo) — não vem pronta.
-
-`build/gerar_relatorios.py` (gerador determinístico, sem IA) continua no repo só
-como **fallback manual**. Limitação conhecida: usa os defaults de `build.py`
-(`META_CPMQL`/`META_CAC`/`VOLUME_MIN_AMOSTRAL`/`N_DIAS_CORTE`), não o que o gestor
-editou no painel (fica em `localStorage`).
-
-Funil completo: `Impressões → Cliques → Page View → Leads → MQLs → Agendamentos
-→ Vendas`. Sem etapa de comparecimento (agendamento via WhatsApp, fora da mídia
-paga) — a responsabilidade do tráfego termina no MQL. Todas as etapas estão
-conectadas e cruzadas — Reuniões/Propostas via CRM comercial (ver
-"Reuniões & Propostas" abaixo).
-
-### Link do criativo (aba de mídia paga)
-`build.py` lê uma coluna opcional de permalink do criativo na aba de mídia →
-mapa `ad_links` (anúncio → 1 permalink). Usado no "Link" das tabelas Top/Piores.
-Sem a coluna, o link vira "—".
-
-> **Layout modular:** o front-end é separado em `identidade-visual.css` + `estilos.css`
-> + `app.js`, costurados por `render()` nos placeholders `__STYLES__`/`__APP_JS__`.
-> Página 1 usa **funil vertical de leads** + KPIs secundários. Topbar tem
-> **seletor de período em calendário** (default "Este mês"). **Heatmap** = cor FIXA
-> por métrica (só opacidade varia): **Gasto=vermelho · Leads=azul · MQLs=ciano ·
-> Vendas=verde · ROAS=amarelo** (`--heat-gasto/leads/mqls/vendas/roas`).
-
-O `build.py` **não agrega**: exporta as linhas cruas e TODA a lógica (filtros de
-data, filtro cruzado, KPIs, tabelas, gráficos, heatmap, imposto) roda no navegador.
-
 ## Rodar/testar local
 
 ```bash
@@ -256,84 +104,15 @@ python build/build.py --leads-file leads.csv --meta-file meta.csv --out dist/ind
 #  O runner do GitHub Actions tem internet e busca os CSVs ao vivo.)
 ```
 
-## Especificação funcional (resumo)
-
-Cinco **páginas** no menu, agrupado por seção como no dash Partiu Empreender
-(26/10/2026): Geral → Visão Geral · Captação de Leads → Funil de Leads (Meta Ads)
-· Captação de Seguidores → Funil Captação de Seguidores · Relatório · ChatGPT Ads →
-Funil de Leads (ChatGPT Ads) — **por último**, a pedido do cliente. Gráfico
-combinado diário no padrão Partiu:
-1 série de barras (MQLs) + linhas Gasto e CPMQL.
-1. **Visão Geral de Leads** — funil vertical (Gasto → Impressões → Cliques → Leads →
-   MQLs → Vendas/Faturamento) + KPIs secundários; gráfico combinado diário +
-   tabela diária com heatmap (todos os leads); barras por origem/faixa/plataforma/profissão.
-2. **Captura mídia paga** — funil em etapas; combinado diário; barras por utm_content;
-   tabela diária com heatmap (só mídia paga); 3 tabelas hierárquicas Campanha →
-   Conjunto → Anúncio, cada uma com gráfico de linha embaixo.
-3. **Relatório** — espelha a Visão Geral + painel de Metas editável + Top/Piores
-   Anúncios (17 colunas + Status) + Insights de Tráfego. Ver `build/GUIA-RELATORIOS.md`.
-
-**Ordem das colunas nas tabelas:** `Data · Dia · Gasto · CPM · CTR · CR · ConvLP · Leads ·
-CPL · Tx‑MQL · MQLs · CPMQL · Reuniões · C/Reunião · Propostas · C/Proposta · ConvMQL ·
-Vendas · CAC · Fat. · ROAS`. Removidas em 24/10/2026 a pedido do cliente (sempre vazias
-ou duplicadas): Checkouts, VisCHK (sem "Adds to Cart" no export), Frequência (funil),
-Receita (= Faturamento), E‑mail (tabela de leads qualificados) e Link (Top/Piores — sem
-coluna de permalink no export).
-
 **Regras obrigatórias das tabelas** (ver `GUIA-REPLICACAO.md`): cabeçalho sticky;
 ordenação tri‑state; colunas redimensionáveis (persist localStorage); linha
 "Total Geral" fixa; dimensão nunca truncada; seleção com toggle + Ctrl multi;
 filtro cruzado bidirecional; tabela diária com último dia no topo; heatmap de cor
 fixa por métrica.
 
-## Reuniões & Propostas (CRM comercial) — regras de 16/10/2026
-Mesma planilha do Funil (planilha mantida pelo Moisés — **só leitura**; não
-mexer no Apps Script `Código.gs`). Abas:
-- **`Comercial_Leads`**: 1 linha por lead do CRM (FinHub): `lead_id`,
-  `marketing_lead_id` (= `Leads.id`), `whatsapp`, `funil_codigo`,
-  `etapa_atual_codigo`…
-- **`Comercial_Etapas`**: 1 evento por mudança de etapa: `lead_id`,
-  `funil_codigo`, `etapa_codigo`, `entrou_em` (UTC), `inferida`.
-- **`Comercial_Presenca`**: `chave` = `"<aba>:<registro_id>"`, `ativo`. A
-  planilha nunca apaga linha — só conta `ativo == 1` (`active_keys()`).
-- **`Investimento`** (fórmula a partir da Extração — não usar/mexer) e
-  **`Dashboard Comercial`** (painel do Moisés, só referência).
-
-Regras (`build.py::build_commercial()`):
-- Só funil `metodo_ral` (`COM_FUNIL`); `consultoria` é outro serviço. Linhas
-  sem funil/etapa = conversas sem etiqueta, ignoradas.
-- Etapas: `formulario` → `reuniao_agendada` → `proposta_enviada` → `fechado` /
-  `perdido`. "Agendar reunião" é etiqueta (lead fica em `formulario`) e **não**
-  conta como reunião.
-- `inferida`: `real` (mudança registrada na hora), `inferida` (o sistema cria a
-  etapa pulada, no mesmo minuto da seguinte), `desconhecida` (histórico
-  importado em massa; data = importação). **Só conta `real` + `inferida`**
-  (`EVENTO_VALIDO`), igual ao painel do Moisés.
-- **Regra de 16/10:** quem chegou em proposta ou fechado conta como reunião;
-  fechado conta como proposta (`REUNIAO_ETAPAS`/`PROPOSTA_ETAPAS`).
-- **Modo coorte:** cada lead gera 1 registro por etapa alcançada, datado no
-  dia em que **entrou**: lead ligado → `Leads.criado_em` (BRT) e campanha/
-  anúncio da aba Leads; sem ligação → 1ª entrada no funil (BRT), `src=
-  "sem_vinculo"`, mais um registro `lc:1` (lead só no comercial). Leads com
-  entrada antes de `FUNNEL_START` ficam fora.
-- Ligação CRM → Leads: `marketing_lead_id`, fallback telefone canônico.
-
-Saída `DATA.com[]` (`{d, src, camp, adset, ad, ag|pr|lc: 1}`); no navegador
-`SALES = sales.concat(com)`. Campo `agendamentos` = **Reuniões agendadas** na UI.
-`salesOf()`: `txag` (reuniões ÷ MQLs), `cpag`, `txprop` (propostas ÷ reuniões),
-`cpprop`, `txvprop` (vendas ÷ propostas). Visão Geral/Relatório usam o total
-(inclui sem vínculo, com aviso `#geralCrmNote`/`#relCrmNote`; o card Leads
-continua sendo só o formulário); Meta/Top-Piores só `src=="meta"`; ChatGPT só
-contagens. Conferência (01/09–16/10/2026): 30 reuniões, 20 propostas, 3 vendas
-(R$ 7.050,75), 54 leads só no comercial. `coletar_dados_relatorio.py` usa o
-mesmo `process()` (com presença) e passa `sales + com` ao `relatorio_lib.agg()`.
-
-As abas comerciais têm muitas colunas vazias: sem `&headers=1` na URL do gviz
-(`EXPORT_URL`), o Google funde o cabeçalho com a 1ª linha e a leitura quebra.
-
 ## Lacunas de dados
-- Nenhuma etapa do funil sem fonte hoje. Page Views, Reuniões/Propostas e
-  Vendas/Faturamento estão conectados.
+- Sem classificação de lead (MQL), sem compradores, sem CRM — fora do escopo deste funil.
+- Sem coluna de permalink do criativo no export da Meta → "Link" não aparece.
 
 ## Publicação — problemas conhecidos
 1. **Push:** se a integração GitHub da sessão for somente‑leitura (403), o caminho
