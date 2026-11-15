@@ -197,10 +197,12 @@ def is_test_lead(rowtext: str) -> bool:
 
 def is_test_row(name: str, email: str, *utms: str) -> bool:
     """Leads de teste do formulário: nome "teste…", e-mail "teste…@" ou alguma
-    UTM com "teste" (ex.: utm_source=teste, utm_campaign=testecampaign)."""
+    UTM que COMEÇA com "teste" (ex.: utm_source=teste, utm_campaign=testecampaign).
+    Só o início: "teste" no meio do nome é campanha real — ex. "BC-BF26 | … |
+    Teste de criativos" (antes, `"teste" in utm` descartava todos esses leads)."""
     if norm(name).startswith("teste") or norm(email).split("@")[0].startswith("teste"):
         return True
-    return any("teste" in norm(u) for u in utms)
+    return any(norm(u).startswith("teste") for u in utms)
 
 
 ORGANIC_SOURCES = ("organico", "organic", "org", "manychat", "bio", "direct", "direto")

@@ -55,7 +55,7 @@ Sigla do funil: **`BC-BF26`** (ex.: `BC-BF26 | E2-CAP | P1-QUENTE | LEAD | CBO |
 - `utm_source` orgânico (`organico`, `manychat`…; ex.: campanha `mctv`) ou sem
   campanha → `src="org"` (entra só na Visão Geral).
 - **Leads de teste descartados** (`is_test_row`): nome começando com "teste",
-  e-mail `teste…@` ou qualquer UTM contendo "teste".
+  e-mail `teste…@` ou UTM que **começa** com "teste" (não basta conter: a campanha "… | Teste de criativos" é real).
 - Para os gráficos da Visão Geral: `bucket` = `utm_campaign` cru ("Leads por
   campanha") e `prof` = `utm_content` ("Leads por anúncio").
 
